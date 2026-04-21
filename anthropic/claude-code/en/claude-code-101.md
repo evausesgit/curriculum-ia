@@ -11,12 +11,13 @@
 
 1. [What Claude Code Actually Is](#1-what-claude-code-actually-is)
 2. [How It Works Under the Hood](#2-how-it-works-under-the-hood)
-3. [Installation by Environment](#3-installation-by-environment)
-4. [Writing Your First Prompt](#4-writing-your-first-prompt)
-5. [The Explore → Plan → Code → Commit Workflow](#5-the-explore--plan--code--commit-workflow)
-6. [Managing Context in Long Sessions](#6-managing-context-in-long-sessions)
-7. [Code Review with Claude](#7-code-review-with-claude)
-8. [Customizing Claude Code for Your Team](#8-customizing-claude-code-for-your-team)
+3. [Slash Commands](#3-slash-commands)
+4. [Installation by Environment](#4-installation-by-environment)
+5. [Writing Your First Prompt](#5-writing-your-first-prompt)
+6. [The Explore → Plan → Code → Commit Workflow](#6-the-explore--plan--code--commit-workflow)
+7. [Managing Context in Long Sessions](#7-managing-context-in-long-sessions)
+8. [Code Review with Claude](#8-code-review-with-claude)
+9. [Customizing Claude Code for Your Team](#9-customizing-claude-code-for-your-team)
 
 ---
 
@@ -92,7 +93,78 @@ Claude Code offers several levels of autonomy:
 
 ---
 
-## 3. Installation by Environment
+## 3. Slash Commands
+
+### What they are
+
+Slash commands are built-in instructions you type directly in the Claude Code prompt. They don't get sent to the model as a conversation message — they trigger specific behaviors in the Claude Code application itself.
+
+Think of them as the control panel of your session: they let you manage context, inspect state, configure tools, and launch workflows — all without leaving the terminal.
+
+### How to invoke them
+
+Type `/` followed by the command name and press Enter. No arguments are needed for most commands.
+
+```
+/compact
+```
+
+Some commands open an interactive menu (like `/agents` or `/hooks`). Others execute immediately (like `/clear`).
+
+You can also type `/` alone and press Tab to see available commands.
+
+### Command reference
+
+#### Session & context
+
+| Command | What it does | When to use it |
+|---------|-------------|----------------|
+| `/context` | Shows context window usage: total size, breakdown by category, visual chart | Before a long task, or when responses feel less sharp |
+| `/compact` | Summarizes and compresses the current context to free up space | Mid-feature, when approaching the context limit |
+| `/clear` | Wipes the entire context — fresh session with no memory | Starting a new, unrelated feature or task |
+| `/cost` | Shows the token cost of the current session | Tracking usage or debugging unexpectedly large context |
+
+#### Project setup
+
+| Command | What it does | When to use it |
+|---------|-------------|----------------|
+| `/init` | Analyzes your project and generates a `CLAUDE.md` file | First time setting up Claude Code on a project |
+
+#### Tools & integrations
+
+| Command | What it does | When to use it |
+|---------|-------------|----------------|
+| `/mcp` | Lists connected MCP servers, their status, and lets you enable/disable them | Managing external integrations during a session |
+| `/agents` | Opens the subagent manager: list, create, or edit subagents | Setting up or reviewing agents for your project |
+| `/hooks` | Opens the hook configurator | Adding or reviewing deterministic guardrails |
+
+#### Git & code
+
+| Command | What it does | When to use it |
+|---------|-------------|----------------|
+| `/commit-push-pr` | Commits changes, pushes the branch, and opens a PR — in one step | End of a feature when you're ready to ship |
+
+#### Help & diagnostics
+
+| Command | What it does | When to use it |
+|---------|-------------|----------------|
+| `/help` | Lists all available commands | When you forget a command name |
+| `/doctor` | Diagnoses your Claude Code installation (config, auth, connectivity) | Something feels broken and you don't know why |
+
+### CLI flags (outside the session)
+
+Some behaviors are controlled via CLI flags when launching Claude Code, not from inside a session:
+
+| Flag | What it does |
+|------|-------------|
+| `claude --from-pr <number>` | Resumes a session linked to a specific PR (to address review comments, fix a broken build, etc.) |
+| `claude --debug` | Starts a session with verbose debug output — useful for diagnosing skill or MCP loading issues |
+| `claude mcp add <name>` | Adds a new MCP server to your configuration |
+
+---
+
+## 4. Installation by Environment
+
 
 Claude Code runs in several environments. Pick the one that fits your workflow.
 
@@ -146,7 +218,7 @@ Access via `claude.ai/code` or the sidebar in Claude.ai. Same experience as Desk
 
 ---
 
-## 4. Writing Your First Prompt
+## 5. Writing Your First Prompt
 
 ### Choosing your interaction mode
 
@@ -177,7 +249,7 @@ Claude will explore your CSS/Tailwind files, ask questions if needed, then walk 
 
 ---
 
-## 5. The Explore → Plan → Code → Commit Workflow
+## 6. The Explore → Plan → Code → Commit Workflow
 
 This is the core workflow for teams to adopt. It prevents the main trap: asking for code immediately without establishing context, which leads to costly corrections mid-session.
 
@@ -214,7 +286,7 @@ Before pushing your code:
 
 ---
 
-## 6. Managing Context in Long Sessions
+## 7. Managing Context in Long Sessions
 
 The context window is a finite resource. Managing it actively maintains response quality throughout a session.
 
@@ -238,7 +310,7 @@ The context window is a finite resource. Managing it actively maintains response
 
 ---
 
-## 7. Code Review with Claude
+## 8. Code Review with Claude
 
 ### Subagent review: guaranteed fresh perspective
 
@@ -264,7 +336,7 @@ Useful for addressing review comments or fixing a broken build.
 
 ---
 
-## 8. Customizing Claude Code for Your Team
+## 9. Customizing Claude Code for Your Team
 
 ### 8.1 The CLAUDE.md file
 

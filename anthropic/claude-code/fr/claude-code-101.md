@@ -11,12 +11,13 @@
 
 1. [Ce qu'est vraiment Claude Code](#1-ce-quest-vraiment-claude-code)
 2. [Comment ça marche sous le capot](#2-comment-ça-marche-sous-le-capot)
-3. [Installation selon votre environnement](#3-installation-selon-votre-environnement)
-4. [Écrire son premier prompt](#4-écrire-son-premier-prompt)
-5. [Le workflow Explore → Plan → Code → Commit](#5-le-workflow-explore--plan--code--commit)
-6. [Gérer le contexte sur une longue session](#6-gérer-le-contexte-sur-une-longue-session)
-7. [Revue de code avec Claude](#7-revue-de-code-avec-claude)
-8. [Personnaliser Claude Code pour votre équipe](#8-personnaliser-claude-code-pour-votre-équipe)
+3. [Les slash commands](#3-les-slash-commands)
+4. [Installation selon votre environnement](#4-installation-selon-votre-environnement)
+5. [Écrire son premier prompt](#5-écrire-son-premier-prompt)
+6. [Le workflow Explore → Plan → Code → Commit](#6-le-workflow-explore--plan--code--commit)
+7. [Gérer le contexte sur une longue session](#7-gérer-le-contexte-sur-une-longue-session)
+8. [Revue de code avec Claude](#8-revue-de-code-avec-claude)
+9. [Personnaliser Claude Code pour votre équipe](#9-personnaliser-claude-code-pour-votre-équipe)
 
 ---
 
@@ -94,7 +95,77 @@ Claude Code propose plusieurs niveaux d'autonomie :
 
 ---
 
-## 3. Installation selon votre environnement
+## 3. Les slash commands
+
+### Ce que c'est
+
+Les slash commands sont des instructions intégrées que vous tapez directement dans le prompt de Claude Code. Elles ne sont pas envoyées au modèle comme un message de conversation — elles déclenchent des comportements spécifiques dans l'application Claude Code elle-même.
+
+Pensez-y comme au panneau de contrôle de votre session : elles permettent de gérer le contexte, inspecter l'état, configurer des outils et lancer des workflows — sans quitter le terminal.
+
+### Comment les invoquer
+
+Tapez `/` suivi du nom de la commande et appuyez sur Entrée. La plupart des commandes ne nécessitent pas d'arguments.
+
+```
+/compact
+```
+
+Certaines commandes ouvrent un menu interactif (comme `/agents` ou `/hooks`). D'autres s'exécutent immédiatement (comme `/clear`).
+
+Vous pouvez aussi taper `/` seul et appuyer sur Tab pour voir les commandes disponibles.
+
+### Référence des commandes
+
+#### Session & contexte
+
+| Commande | Ce qu'elle fait | Quand l'utiliser |
+|----------|----------------|-----------------|
+| `/context` | Affiche l'utilisation de la fenêtre de contexte : taille totale, répartition par catégorie, graphique visuel | Avant une longue tâche, ou quand les réponses semblent moins précises |
+| `/compact` | Résume et compresse le contexte actuel pour libérer de la place | En cours de feature, quand on approche de la limite |
+| `/clear` | Efface tout le contexte — nouvelle session vierge | Pour démarrer une nouvelle feature sans lien avec la précédente |
+| `/cost` | Affiche le coût en tokens de la session en cours | Pour suivre l'utilisation ou déboguer un contexte anormalement grand |
+
+#### Initialisation du projet
+
+| Commande | Ce qu'elle fait | Quand l'utiliser |
+|----------|----------------|-----------------|
+| `/init` | Analyse votre projet et génère un fichier `CLAUDE.md` | Première mise en place de Claude Code sur un projet |
+
+#### Outils & intégrations
+
+| Commande | Ce qu'elle fait | Quand l'utiliser |
+|----------|----------------|-----------------|
+| `/mcp` | Liste les serveurs MCP connectés, leur statut, et permet de les activer/désactiver | Gérer les intégrations externes pendant une session |
+| `/agents` | Ouvre le gestionnaire de sous-agents : lister, créer, modifier | Configurer ou revoir les agents de votre projet |
+| `/hooks` | Ouvre le configurateur de hooks | Ajouter ou revoir des guardrails déterministes |
+
+#### Git & code
+
+| Commande | Ce qu'elle fait | Quand l'utiliser |
+|----------|----------------|-----------------|
+| `/commit-push-pr` | Commit, push et création de PR — en une seule étape | En fin de feature, quand vous êtes prêt à shipper |
+
+#### Aide & diagnostic
+
+| Commande | Ce qu'elle fait | Quand l'utiliser |
+|----------|----------------|-----------------|
+| `/help` | Liste toutes les commandes disponibles | Quand vous avez oublié une commande |
+| `/doctor` | Diagnostique votre installation Claude Code (config, auth, connectivité) | Quelque chose ne fonctionne pas et vous ne savez pas pourquoi |
+
+### Flags CLI (en dehors de la session)
+
+Certains comportements se contrôlent via des flags au lancement de Claude Code, pas depuis l'intérieur d'une session :
+
+| Flag | Ce qu'il fait |
+|------|--------------|
+| `claude --from-pr <numéro>` | Reprend la session liée à une PR (pour répondre à des commentaires de review, corriger un build cassé...) |
+| `claude --debug` | Lance une session avec un output de debug verbeux — utile pour diagnostiquer les problèmes de chargement de Skills ou MCP |
+| `claude mcp add <nom>` | Ajoute un nouveau serveur MCP à votre configuration |
+
+---
+
+## 4. Installation selon votre environnement
 
 Claude Code s'installe dans plusieurs environnements. Choisissez celui qui correspond à votre workflow.
 
@@ -148,7 +219,7 @@ Accès via `claude.ai/code` ou le menu latéral de Claude.ai. Même expérience 
 
 ---
 
-## 4. Écrire son premier prompt
+## 5. Écrire son premier prompt
 
 ### Choisir son mode d'interaction
 
@@ -179,7 +250,7 @@ Claude va explorer vos fichiers CSS/Tailwind, vous poser des questions si néces
 
 ---
 
-## 5. Le workflow Explore → Plan → Code → Commit
+## 6. Le workflow Explore → Plan → Code → Commit
 
 C'est le workflow central à adopter en équipe. Il évite le principal piège : demander du code directement sans avoir établi de contexte, ce qui entraîne des corrections coûteuses en cours de route.
 
@@ -216,7 +287,7 @@ Avant de pousser votre code :
 
 ---
 
-## 6. Gérer le contexte sur une longue session
+## 7. Gérer le contexte sur une longue session
 
 La fenêtre de contexte est une ressource limitée. La gérer activement maintient la qualité des réponses tout au long d'une session.
 
@@ -240,7 +311,7 @@ La fenêtre de contexte est une ressource limitée. La gérer activement maintie
 
 ---
 
-## 7. Revue de code avec Claude
+## 8. Revue de code avec Claude
 
 ### Revue par sous-agent : regard neuf garanti
 
@@ -266,7 +337,7 @@ Utile pour répondre à des commentaires de review ou corriger un build cassé.
 
 ---
 
-## 8. Personnaliser Claude Code pour votre équipe
+## 9. Personnaliser Claude Code pour votre équipe
 
 ### 8.1 Le fichier CLAUDE.md
 
