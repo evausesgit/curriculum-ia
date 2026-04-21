@@ -1,436 +1,340 @@
-# Introduction to Agent Skills
+# Les Skills Claude Code — Guide pédagogique pour équipes
 
-> Learn how to build, configure, and share Skills in Claude Code — reusable markdown instructions that Claude automatically applies to the right tasks at the right time.
+> Ce guide explique comment créer, configurer et partager des Skills dans Claude Code — des instructions réutilisables que Claude applique automatiquement aux bonnes tâches, au bon moment.
 
-**Source:** https://anthropic.skilljar.com/introduction-to-agent-skills  
-**Format:** 6 lessons · Certificate of completion  
-**Prix:** Gratuit
-
----
-
-## About this course
-
-In this course, you'll learn how to stop repeating yourself and start teaching Claude once. You'll discover what Skills are and how they differ from other Claude Code customization options like CLAUDE.md, hooks, and subagents. You'll create your first Skill from scratch — writing the SKILL.md frontmatter, crafting effective descriptions that reliably trigger matching, and organizing your skill directory with progressive disclosure to keep context windows efficient. You'll also explore advanced configuration options like restricting tool access with `allowed-tools` and using scripts that execute without consuming context.
-
-Beyond building individual Skills, you'll learn how to share them with your team by committing them to a repository, distribute them more broadly through plugins, and deploy them organization-wide using enterprise managed settings. You'll see how to wire Skills into custom subagents for isolated, expert task delegation, and you'll walk through a complete troubleshooting guide for diagnosing issues — from skills that won't trigger to priority conflicts and runtime errors.
+**Cours original :** [Introduction to Agent Skills](https://anthropic.skilljar.com/introduction-to-agent-skills) — Anthropic Academy (gratuit)  
+**Format :** 6 leçons · certificat
 
 ---
 
-## Lesson 1 — What are skills?
+## Table des matières
 
-*Estimated time: 15 minutes*
-
-**By the end of this lesson you'll be able to:**
-- Define what Claude Code skills are and how they work
-- Explain where skills live (personal vs. project directories)
-- Distinguish between skills, CLAUDE.md, and slash commands
-- Identify scenarios where skills are the right customization tool
+1. [Pourquoi les Skills ?](#1-pourquoi-les-skills)
+2. [Anatomie d'une Skill](#2-anatomie-dune-skill)
+3. [Créer sa première Skill](#3-créer-sa-première-skill)
+4. [Configuration avancée](#4-configuration-avancée)
+5. [Skills vs. autres outils de personnalisation](#5-skills-vs-autres-outils-de-personnalisation)
+6. [Partager les Skills avec son équipe](#6-partager-les-skills-avec-son-équipe)
+7. [Diagnostiquer et résoudre les problèmes](#7-diagnostiquer-et-résoudre-les-problèmes)
 
 ---
 
-Every time you explain your team's coding standards to Claude, you're repeating yourself. Every PR review, you re-describe how you want feedback structured. Every commit message, you remind Claude of your preferred format. Skills fix this.
+## 1. Pourquoi les Skills ?
 
-A skill is a markdown file that teaches Claude how to do something once. Claude then applies that knowledge automatically whenever it's relevant.
+### Le problème qu'elles résolvent
 
-### What Skills Are
+Chaque fois que vous expliquez vos conventions de PR à Claude, vous vous répétez. Chaque revue de code, vous re-décrivez comment vous voulez le feedback structuré. Chaque message de commit, vous rappelez le format attendu.
 
-Skills are folders of instructions and resources that Claude Code can discover and use to handle tasks more accurately. Each skill lives in a `SKILL.md` file with a name and description in its frontmatter.
+Les Skills permettent d'enseigner ces choses à Claude **une seule fois**. Claude les applique ensuite automatiquement, sans que vous ayez à les réécrire.
 
-The description is how Claude decides whether to use the skill. When you ask Claude to review a PR, it matches your request against available skill descriptions and finds the relevant one.
+### Ce qui distingue les Skills des autres options
 
-Here's what a skill's frontmatter looks like:
+Claude Code offre plusieurs façons de personnaliser son comportement. Voici comment les Skills se positionnent :
 
-```yaml
+| Mécanisme | Chargement | Idéal pour |
+|-----------|-----------|------------|
+| `CLAUDE.md` | À chaque conversation | Standards permanents du projet |
+| **Skills** | À la demande, selon le contexte | Expertise spécifique à une tâche |
+| Slash commands | Invocation explicite | Actions ponctuelles déclenchées manuellement |
+| Hooks | Événements (sauvegarde, commit...) | Automatisations déterministes |
+
+L'avantage clé des Skills : elles ne consomment du contexte que quand elles sont pertinentes. Votre checklist de revue de PR n'a pas besoin d'être en mémoire quand vous déboguez.
+
 ---
-name: pr-review
-description: Reviews pull requests for code quality. Use when reviewing PRs or checking code changes.
----
+
+## 2. Anatomie d'une Skill
+
+### Structure d'un fichier SKILL.md
+
+Une Skill est un dossier contenant un fichier `SKILL.md`. Ce fichier a deux parties séparées par du frontmatter YAML :
+
+```
+.claude/skills/nom-de-la-skill/
+└── SKILL.md
 ```
 
-Below the frontmatter, you write the actual instructions — your review checklist, formatting preferences, or whatever Claude needs to know for that task.
+```markdown
+---
+name: nom-de-la-skill
+description: Ce que fait la skill et quand Claude doit l'utiliser.
+---
 
-### Where Skills Live
+Instructions détaillées pour Claude.
+Tout ce qui vient après le frontmatter est le contenu de la skill.
+```
 
-| Location | Path | Scope |
-|----------|------|-------|
-| Personal | `~/.claude/skills` (macOS/Linux) or `C:/Users/<user>/.claude/skills` (Windows) | All your projects |
-| Project | `.claude/skills` inside a repository | Anyone who clones the repo |
+### Les champs du frontmatter
 
-Project skills get committed to version control alongside your code, so the whole team shares them.
+| Champ | Requis | Contraintes | Rôle |
+|-------|--------|-------------|------|
+| `name` | ✅ | Minuscules, chiffres, tirets. Max 64 caractères. | Identifiant de la skill |
+| `description` | ✅ | Max 1 024 caractères | Critère de déclenchement — c'est ce que Claude lit pour décider si la skill est pertinente |
+| `allowed-tools` | Non | Liste d'outils | Restreint les outils disponibles quand la skill est active |
+| `model` | Non | Identifiant de modèle | Spécifie le modèle Claude à utiliser |
 
-### Skills vs. CLAUDE.md vs. Slash Commands
+### Comment Claude décide d'utiliser une skill
 
-- **CLAUDE.md** loads into every conversation — use it for always-on project standards (e.g. always use TypeScript strict mode).
-- **Skills** load on demand when they match your request. Claude only loads the name and description initially, so they don't fill up your context window. Your PR review checklist doesn't need to be in context when you're debugging.
-- **Slash commands** require you to explicitly type them. Skills don't — Claude applies them when it recognizes the situation.
+Au démarrage, Claude scanne les dossiers de skills mais ne charge que le `name` et la `description` — pas le contenu. Quand vous envoyez un message, il compare sémantiquement votre requête à l'ensemble des descriptions disponibles. Si une description correspond, Claude vous demande confirmation avant de charger le contenu complet.
 
-### When to Use Skills
+> **Conséquence pratique :** une description bien rédigée = une skill qui se déclenche au bon moment. Une description vague = une skill invisible.
 
-Skills work best for specialized knowledge that applies to specific tasks:
-- Code review standards your team follows
-- Commit message formats you prefer
-- Brand guidelines for your organization
-- Documentation templates for specific types of docs
-- Debugging checklists for particular frameworks
+### Où vivent les Skills
 
-**Rule of thumb:** if you find yourself explaining the same thing to Claude repeatedly, that's a skill waiting to be written.
+| Type | Chemin | Portée |
+|------|--------|--------|
+| Personnelle | `~/.claude/skills/` (macOS/Linux) ou `C:\Users\<user>\.claude\skills\` (Windows) | Tous vos projets |
+| Projet | `.claude/skills/` à la racine du repo | Tout le monde sur ce repo |
 
 ---
 
-## Lesson 2 — Creating your first skill
+## 3. Créer sa première Skill
 
-*Estimated time: 20 minutes*
+### Exemple : une Skill de description de PR
 
-**By the end of this lesson you'll be able to:**
-- Create a skill from scratch with proper frontmatter structure
-- Test and verify that a skill loads correctly in Claude Code
-- Explain how Claude Code matches incoming requests to available skills
-- Describe the skill priority hierarchy (Enterprise, Personal, Project, Plugins)
+Nous allons créer une Skill personnelle qui standardise la rédaction des descriptions de PR. Personnelle = elle s'appliquera à tous vos projets.
 
----
-
-### Creating a Skill
-
-We'll build a personal skill that teaches Claude how to write PR descriptions in a consistent format. Since it's a personal skill, it lives in your home directory and works across all your projects.
-
-First, create a directory for your skill inside the skills folder:
-
+**Étape 1 — Créer le dossier :**
 ```bash
 mkdir -p ~/.claude/skills/pr-description
 ```
 
-Then create a `SKILL.md` file inside that directory:
-
+**Étape 2 — Créer le fichier SKILL.md :**
 ```markdown
 ---
 name: pr-description
-description: Writes pull request descriptions. Use when creating a PR, writing a PR, or when the user asks to summarize changes for a pull request.
+description: Rédige des descriptions de pull request. À utiliser quand on crée une PR,
+  qu'on résume des changements, ou qu'on demande une description de pull request.
 ---
 
-When writing a PR description:
+Pour rédiger une description de PR :
 
-1. Run `git diff main...HEAD` to see all changes on this branch
-2. Write a description following this format:
+1. Exécuter `git diff main...HEAD` pour voir tous les changements de la branche
+2. Rédiger la description au format suivant :
 
-## What
-One sentence explaining what this PR does.
+## Ce qui change
+Une phrase expliquant ce que fait cette PR.
 
-## Why
-Brief context on why this change is needed
+## Pourquoi
+Contexte court sur la raison de ce changement.
 
-## Changes
-- Bullet points of specific changes made
-- Group related changes together
-- Mention any files deleted or renamed
+## Détail des modifications
+- Points listés des changements spécifiques
+- Regrouper les changements liés
+- Mentionner les fichiers supprimés ou renommés
 ```
 
-The **name** identifies your skill. The **description** tells Claude when to use it — this is the matching criteria. Everything after the second set of dashes is the instructions Claude follows when the skill is activated.
+**Étape 3 — Tester :**
+Redémarrez votre session Claude Code (les Skills sont chargées au démarrage), puis dites : *"écris une description de PR pour mes changements"*. Claude confirmera qu'il utilise votre Skill et produira le même format à chaque fois.
 
-### Testing Your Skill
+### Priorité en cas de conflit de noms
 
-Claude Code loads skills at startup, so **restart your session** after creating one. You can verify it's available by checking the available skills list.
+Quand deux Skills portent le même nom, l'ordre de priorité est :
 
-To test it, make some changes on a branch and say something like *"write a PR description for my changes."* Claude will indicate it's using the PR description skill, check your diff, and write a description following your template — same format every time.
+```
+Enterprise > Personnel > Projet > Plugins
+```
 
-### How Skill Matching Works
+Si votre organisation a une Skill `code-review` en Enterprise, votre Skill personnelle `code-review` sera ignorée. Solution : utilisez des noms plus spécifiques (`frontend-code-review`, `api-code-review`).
 
-When Claude Code starts, it scans four locations for skills but only loads the **name and description** — not the full content. When you send a request, Claude compares your message against the descriptions of all available skills using semantic matching.
+### Mettre à jour ou supprimer une Skill
 
-Once a match is found, Claude asks you to confirm loading the skill. After you confirm, Claude reads the complete `SKILL.md` file and follows its instructions.
-
-### Skill Priority
-
-When two skills have the same name, this priority order applies:
-
-| Priority | Source |
-|----------|--------|
-| 1 (highest) | Enterprise (managed settings) |
-| 2 | Personal (`~/.claude/skills`) |
-| 3 | Project (`.claude/skills` in repo) |
-| 4 (lowest) | Plugins |
-
-To avoid conflicts, use descriptive names: `frontend-review` instead of just `review`.
-
-### Updating and Removing Skills
-
-- To update a skill: edit its `SKILL.md` file
-- To remove a skill: delete its directory
-- Always **restart Claude Code** after any changes
+- **Mettre à jour** : modifier le fichier `SKILL.md`
+- **Supprimer** : effacer le dossier entier
+- **Important** : redémarrer Claude Code après toute modification
 
 ---
 
-## Lesson 3 — Configuration and multi-file skills
+## 4. Configuration avancée
 
-*Estimated time: 20 minutes*
+### Restreindre les outils avec `allowed-tools`
 
-**By the end of this lesson you'll be able to:**
-- Configure advanced skill metadata fields including `allowed-tools` and `model`
-- Write effective skill descriptions that reliably trigger on the right requests
-- Use `allowed-tools` to restrict what Claude can do when a skill is active
-- Organize complex skills using progressive disclosure and multi-file structures
-
----
-
-### Skill Metadata Fields
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | ✅ | Lowercase letters, numbers, hyphens only. Max 64 chars. Should match directory name. |
-| `description` | ✅ | How Claude decides when to use the skill. Max 1,024 chars. Most important field. |
-| `allowed-tools` | Optional | Restricts which tools Claude can use when the skill is active. |
-| `model` | Optional | Specifies which Claude model to use for the skill. |
-
-### Writing Effective Descriptions
-
-A good description answers two questions:
-1. **What does the skill do?**
-2. **When should Claude use it?**
-
-If your skill isn't triggering when you expect it to, add more keywords that match how you actually phrase your requests.
-
-### Restricting Tools with `allowed-tools`
-
-Use `allowed-tools` when you want a skill that can only read files, not modify them — useful for security-sensitive workflows or read-only tasks:
+Par défaut, une Skill active n'impose aucune restriction sur les outils disponibles. Vous pouvez changer ça pour créer des Skills en lecture seule — utiles pour l'exploration de codebase, l'onboarding, ou les workflows sensibles :
 
 ```yaml
 ---
-name: codebase-onboarding
-description: Helps new developers understand how the system works.
+name: exploration-codebase
+description: Aide à comprendre l'architecture et le fonctionnement du système.
+  À utiliser pour l'onboarding ou les questions d'architecture.
 allowed-tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 ```
 
-When this skill is active, Claude can only use those tools. If you omit `allowed-tools` entirely, the skill doesn't restrict anything.
+Quand cette Skill est active, Claude ne peut pas modifier de fichiers — même si vous le lui demandez explicitement.
 
-### Progressive Disclosure
+### Progressive disclosure : structurer les grandes Skills
 
-Keep essential instructions in `SKILL.md` and put detailed reference material in separate files that Claude reads only when needed.
+Le contenu d'une Skill est chargé entièrement en contexte quand elle est activée. Pour les Skills complexes, charger 2 000 lignes d'un coup serait inefficace.
 
-**Recommended directory structure:**
+La solution : garder l'essentiel dans `SKILL.md` et répartir les détails dans des fichiers annexes, chargés uniquement si nécessaire.
+
+**Structure recommandée :**
 ```
-.claude/skills/my-skill/
-├── SKILL.md          # Core instructions (keep under 500 lines)
-├── scripts/          # Executable code
-├── references/       # Additional documentation
-└── assets/           # Images, templates, or other data files
+.claude/skills/ma-skill/
+├── SKILL.md              # Instructions essentielles (< 500 lignes)
+├── references/           # Documentation détaillée
+│   └── guide-archi.md
+├── scripts/              # Scripts exécutables
+│   └── validate.sh
+└── assets/               # Templates, données
 ```
 
-In `SKILL.md`, link to supporting files with clear instructions about when to load them. For example: *"Read `references/architecture-guide.md` only when asked about system design."*
+**Dans SKILL.md, indiquez explicitement quand charger les fichiers annexes :**
+```markdown
+Pour les questions d'architecture système, lire `references/guide-archi.md`.
+Pour toute autre demande, utiliser les instructions ci-dessous uniquement.
+```
 
-**Rule of thumb:** keep `SKILL.md` under 500 lines. If you're exceeding that, split content into separate reference files.
+Ainsi, Claude ne charge `guide-archi.md` que si la question le justifie.
 
-### Using Scripts Efficiently
+> **Règle pratique :** si votre `SKILL.md` dépasse 500 lignes, c'est le signe qu'une partie du contenu devrait être dans un fichier de référence.
 
-Scripts in your skill directory can run **without loading their contents into context**. The script executes and only the output consumes tokens. Tell Claude to *run* the script, not *read* it.
+### Exécuter des scripts sans consommer de contexte
 
-This is useful for:
-- Environment validation
-- Data transformations that need to be consistent
-- Operations that are more reliable as tested code than generated code
+Les scripts référencés dans une Skill peuvent s'exécuter sans que leur contenu soit chargé en contexte — seul le résultat de l'exécution est visible par Claude. Dites à Claude d'**exécuter** le script, pas de le **lire**.
 
----
-
-## Lesson 4 — Skills vs. other Claude Code features
-
-*Estimated time: 15 minutes*
-
-**By the end of this lesson you'll be able to:**
-- Compare skills to CLAUDE.md, subagents, hooks, and MCP servers
-- Choose the right Claude Code customization feature for a given use case
-- Design a complementary setup that combines multiple features effectively
+Particulièrement utile pour :
+- La validation d'environnement
+- Les transformations de données qui doivent être reproductibles
+- Les opérations mieux codées que générées
 
 ---
 
-### Decision Guide
+## 5. Skills vs. autres outils de personnalisation
 
-| Feature | Trigger | Best for |
-|---------|---------|----------|
-| **CLAUDE.md** | Every conversation | Always-on project standards, constraints, framework preferences |
-| **Skills** | On demand (semantic match) | Task-specific expertise, procedures relevant only sometimes |
-| **Subagents** | Explicit delegation | Isolated execution contexts, delegated work with different tool access |
-| **Hooks** | Events (file save, tool call) | Auto-formatting, validation, automated side effects |
-| **MCP servers** | Tool calls | External tools and integrations |
+### Guide de décision rapide
 
-### CLAUDE.md vs Skills
+```
+La règle doit-elle s'appliquer à CHAQUE conversation ?
+├── Oui → CLAUDE.md
+└── Non → La règle s'applique à des tâches spécifiques ?
+    ├── Oui → Skill
+    └── La règle doit-elle s'appliquer à chaque fois qu'un événement se produit ?
+        ├── Oui → Hook
+        └── Avez-vous besoin d'un contexte d'exécution isolé ?
+            ├── Oui → Sous-agent
+            └── Avez-vous besoin d'un outil externe ?
+                └── Oui → MCP
+```
 
-**Use CLAUDE.md for:**
-- Project-wide standards that always apply
-- Constraints like "never modify the database schema"
-- Framework preferences and coding style
+### Comparaison détaillée
 
-**Use Skills for:**
-- Task-specific expertise
-- Knowledge that's only relevant sometimes
-- Detailed procedures that would clutter every conversation
+**CLAUDE.md vs Skills**
 
-### Skills vs Subagents
+Le `CLAUDE.md` est toujours en mémoire — chaque conversation commence avec ce contexte. Une Skill n'est chargée que quand elle est pertinente.
 
-Skills **add knowledge to your current conversation** — the instructions join the existing context.
+Exemple concret : *"utiliser TypeScript strict mode"* → `CLAUDE.md`. *"Checklist de revue de PR"* → Skill (inutile de la charger quand vous déboguez un problème de perf).
 
-Subagents **run in a separate context** — they receive a task, work on it independently, and return results.
+**Skills vs Sous-agents**
 
-**Use Subagents when:**
-- You want to delegate a task to a separate execution context
-- You need different tool access than the main conversation
+Une Skill ajoute des connaissances à votre conversation en cours. Un sous-agent crée un nouveau fil d'exécution isolé avec son propre contexte.
 
-**Use Skills when:**
-- You want to enhance Claude's knowledge for the current task
-- The expertise applies throughout a conversation
+Utilisez un sous-agent quand vous voulez déléguer une tâche complète et n'en recevoir que le résultat. Utilisez une Skill quand vous voulez enrichir la façon dont Claude traite votre demande actuelle.
 
-### Skills vs Hooks
+**Skills vs Hooks**
 
-Hooks fire on **events** (e.g. every time Claude saves a file). Skills activate based on **what you're asking**.
+Les hooks se déclenchent sur des événements (une sauvegarde de fichier, un appel d'outil). Les Skills se déclenchent sur l'intention (ce que vous demandez).
 
-**Use Hooks for:** operations that should run on every file save, validation before specific tool calls.
-
-**Use Skills for:** knowledge that informs how Claude handles requests.
-
-### Putting It All Together
-
-A typical setup:
-- **CLAUDE.md** — always-on project standards
-- **Skills** — task-specific expertise that loads on demand
-- **Hooks** — automated operations triggered by events
-- **Subagents** — isolated execution contexts for delegated work
-- **MCP servers** — external tools and integrations
+Utilisez un hook pour ce qui doit toujours se produire automatiquement. Utilisez une Skill pour ce que Claude doit savoir faire quand on lui demande.
 
 ---
 
-## Lesson 5 — Sharing skills
+## 6. Partager les Skills avec son équipe
 
-*Estimated time: 20 minutes*
+Trois niveaux de partage, selon la portée souhaitée.
 
-**By the end of this lesson you'll be able to:**
-- Share skills with your team by committing them to a Git repository
-- Distribute skills across projects through plugins and marketplaces
-- Deploy skills organization-wide using enterprise managed settings
-- Configure custom subagents to use specific skills
+### Niveau 1 : via le repo Git
 
----
+La méthode la plus simple. Les Skills du projet sont dans `.claude/skills/`. En committant ce dossier, tout le monde qui clone le repo les obtient automatiquement — et les mises à jour se propagent via `git pull`.
 
-### Method 1: Committing Skills to Your Repository
+**Idéal pour :**
+- Les standards de code de l'équipe
+- Les workflows spécifiques au projet
+- Les Skills qui référencent la structure de votre codebase
 
-Place skills in `.claude/skills`. Anyone who clones the repo gets them automatically — no extra installation needed. When you push updates, everyone gets them on the next pull.
+### Niveau 2 : via des plugins
 
-Best for:
-- Team coding standards
-- Project-specific workflows
-- Skills that reference your codebase structure
+Les plugins permettent de distribuer des Skills au-delà d'un seul repo, via des marketplaces. Chaque utilisateur installe le plugin dans son Claude Code.
 
-### Method 2: Distributing Skills Through Plugins
+**Idéal pour :** des Skills utiles à la communauté, pas trop liées à un projet spécifique.
 
-Create a plugin with a `skills/` directory following the same file structure as `.claude/`. After publishing to a marketplace, other users can install it into Claude Code.
+### Niveau 3 : via les Enterprise Managed Settings
 
-Best when your skills aren't too project-specific and can be useful to the broader community.
+Les administrateurs peuvent déployer des Skills à toute l'organisation. Ces Skills ont la **priorité absolue** — elles priment sur les Skills personnelles, projet et plugins de même nom.
 
-### Method 3: Enterprise Deployment Through Managed Settings
-
-Administrators can deploy skills organization-wide. Enterprise skills take the **highest priority** — they override personal, project, and plugin skills with the same name.
-
-The managed settings file supports `strictKnownMarketplaces` to control where plugins can be installed from:
-
+Les managed settings permettent aussi de restreindre les sources d'installation de plugins :
 ```json
 "strictKnownMarketplaces": [
-  {
-    "source": "github",
-    "repo": "acme-corp/approved-plugins"
-  },
-  {
-    "source": "npm",
-    "package": "@acme-corp/compliance-plugins"
-  }
+  { "source": "github", "repo": "mon-org/plugins-approuvés" },
+  { "source": "npm", "package": "@mon-org/compliance-plugins" }
 ]
 ```
 
-Best for mandatory standards, security requirements, and compliance workflows.
+**Idéal pour :** les standards obligatoires, les exigences de sécurité ou compliance.
 
-### Skills and Subagents
+### Skills et sous-agents : un point d'attention
 
-**Important:** subagents don't automatically see your skills. When you delegate a task to a subagent, it starts with a fresh, clean context.
+Les sous-agents ne voient **pas** automatiquement les Skills disponibles — ils démarrent avec un contexte vide. De plus :
 
-- **Built-in agents** (Explorer, Plan, Verify) **cannot** access skills at all
-- **Custom subagents** can use skills, but only when explicitly listed in the agent's frontmatter
+- Les agents intégrés (Explorer, Plan, Verify) **ne peuvent pas** accéder aux Skills
+- Seuls les sous-agents **personnalisés** peuvent utiliser des Skills, et uniquement si vous les listez explicitement
 
-To create a custom subagent with skills, use `/agents` → "Create new agent". The generated frontmatter looks like:
+Pour créer un sous-agent avec des Skills, utilisez `/agents` → "Créer un nouvel agent". Le frontmatter généré ressemble à :
 
 ```yaml
 ---
-name: frontend-security-accessibility-reviewer
-description: "Use this agent when you need to review frontend code for accessibility..."
-tools: Bash, Glob, Grep, Read, WebFetch, WebSearch, Skill...
+name: frontend-reviewer
+description: "Utiliser pour la revue de code frontend, accessibilité et perf."
+tools: Bash, Glob, Grep, Read, WebFetch, WebSearch
 model: sonnet
 color: blue
 skills: accessibility-audit, performance-check
 ---
 ```
 
-This pattern works well when:
-- Different subagents need different skills (frontend reviewer vs. backend reviewer)
-- You want to enforce standards in delegated work without relying on prompts
+Ce pattern est particulièrement utile pour des sous-agents spécialisés : un reviewer frontend avec des Skills d'accessibilité, un reviewer backend avec des Skills de sécurité.
 
 ---
 
-## Lesson 6 — Troubleshooting skills
+## 7. Diagnostiquer et résoudre les problèmes
 
-*Estimated time: 15 minutes*
+### Outil de premier recours : le validator
 
-**By the end of this lesson you'll be able to:**
-- Use the skills validator to catch structural issues before debugging
-- Diagnose and fix common skill triggering and loading problems
-- Resolve skill priority conflicts between enterprise, personal, project, and plugin skills
-- Debug runtime errors including missing dependencies, permissions, and path issues
+Avant tout débogage manuel, lancez le validateur de Skills. Il détecte les problèmes structurels (frontmatter mal formé, chemin incorrect, etc.) avant que vous perdiez du temps à chercher ailleurs.
 
----
+Installation recommandée via `uv`. Exécutez-le depuis votre dossier de Skills ou depuis n'importe où en passant le chemin en argument.
 
-### Quick Troubleshooting Checklist
+### Checklist de diagnostic rapide
 
-| Symptom | Fix |
-|---------|-----|
-| **Not triggering** | Improve your description, add trigger phrases that match how you actually phrase requests |
-| **Not loading** | Check path, file name (`SKILL.md` exactly), and YAML syntax |
-| **Wrong skill used** | Make descriptions more distinct from each other |
-| **Being shadowed** | Check the priority hierarchy and rename if needed |
-| **Plugin skills missing** | Clear cache and reinstall |
-| **Runtime failure** | Check dependencies, permissions (`chmod +x`), and path separators (use `/` everywhere) |
+| Symptôme | Cause probable | Solution |
+|----------|---------------|----------|
+| La Skill ne se déclenche pas | Description trop vague ou mal alignée avec vos requêtes | Ajouter des formulations que vous utilisez réellement |
+| La Skill n'apparaît pas dans la liste | Mauvaise structure de fichier | Vérifier que `SKILL.md` est dans un sous-dossier nommé, pas à la racine |
+| Mauvaise Skill utilisée | Descriptions trop similaires entre Skills | Rendre les descriptions plus distinctes et spécifiques |
+| Skill personnelle ignorée | Conflit avec une Skill de priorité supérieure | Renommer votre Skill avec un nom plus spécifique |
+| Skills de plugin absentes | Cache corrompu | Vider le cache, redémarrer Claude Code, réinstaller le plugin |
+| Erreur à l'exécution | Dépendance manquante, permissions, chemin | Vérifier ci-dessous |
 
-### Step 1: Use the Skills Validator
+### La Skill ne se déclenche pas
 
-Run the agent skills verifier command first. It catches structural problems before you spend time debugging other things. (Installation steps vary by OS; `uv` is the easiest method.)
+Claude utilise la correspondance sémantique — votre requête doit avoir une intention qui recoupe la description. Si ça ne déclenche pas :
 
-### Skill Doesn't Trigger
+1. Comparez votre description avec comment vous formulez réellement vos demandes
+2. Ajoutez des formulations alternatives : *"auditer les perfs"*, *"pourquoi c'est lent ?"*, *"optimiser ce code"*
+3. Testez plusieurs variantes — si une ne déclenche pas, ajoutez ces mots dans la description
 
-The cause is almost always the **description**. Claude uses semantic matching, so your request needs to overlap with the description's meaning.
+### La Skill n'est pas chargée
 
-- Check your description against how you're actually phrasing requests
-- Add trigger phrases users would actually say
-- Test with variations like *"help me profile this,"* *"why is this slow?",* *"make this faster"*
+Exigences structurelles strictes :
+- Le fichier doit s'appeler exactement `SKILL.md` — `SKILL` en majuscules, `.md` en minuscules
+- Il doit être dans un sous-dossier nommé (ex: `~/.claude/skills/ma-skill/SKILL.md`), pas directement dans `~/.claude/skills/`
 
-### Skill Doesn't Load
+Lancez `claude --debug` pour voir les erreurs de chargement. Cherchez les messages mentionnant le nom de votre Skill.
 
-Check these structural requirements:
-- The `SKILL.md` file must be **inside a named directory**, not at the skills root
-- The file name must be exactly `SKILL.md` — all caps on "SKILL", lowercase "md"
+### Erreurs à l'exécution
 
-Run `claude --debug` to see loading errors. Look for messages mentioning your skill name.
+Trois causes fréquentes :
 
-### Wrong Skill Gets Used
-
-Your descriptions are probably too similar. Make them more distinct and specific.
-
-### Skill Priority Conflicts
-
-If your personal skill is being ignored, an enterprise or higher-priority skill might have the same name. Options:
-- Rename your skill to something more distinct (usually the easier path)
-- Talk to your admin about the enterprise skill
-
-### Plugin Skills Not Appearing
-
-Clear the cache, restart Claude Code, and reinstall. If skills still don't appear, the plugin structure might be wrong — use the validator tool.
-
-### Runtime Errors
-
-Common causes:
-- **Missing dependencies:** add dependency info to your skill description so Claude knows what's needed
-- **Permission issues:** run `chmod +x` on any scripts your skill references
-- **Path separators:** use forward slashes everywhere, even on Windows
+- **Dépendances manquantes** — si votre Skill utilise des packages externes, ils doivent être installés. Ajoutez l'info de dépendances dans votre description pour que Claude sache ce qui est nécessaire
+- **Permissions de script** — les scripts référencés doivent être exécutables : `chmod +x mon-script.sh`
+- **Séparateurs de chemin** — utilisez des slashes (`/`) partout, même sur Windows
